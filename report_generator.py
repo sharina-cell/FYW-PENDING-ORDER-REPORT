@@ -192,14 +192,27 @@ def build_report(all_orders_file, shopee_files: dict, report_date: datetime = No
         # MP SLA logic
         if channel == 'Shopee':
             raw = mp_sla_map.get(oid, '')
-            try:    mp_sla = pd.to_datetime(raw).strftime('%d/%m/%Y %H:%M') if raw else ''
-            except: mp_sla = raw
-        elif channel == 'TikTok' and ord_dt:
-            mp_sla = (ord_dt + timedelta(days=1)).strftime('%d/%m/%Y %H:%M')
-        elif channel == 'Zalora' and ord_dt:
-            mp_sla = (ord_dt + timedelta(days=3)).strftime('%d/%m/%Y %H:%M')
-        elif channel == 'Lazada' and ord_dt:
-            mp_sla = (ord_dt + timedelta(days=1)).strftime('%d/%m/%Y %H:%M')
+            try:
+                mp_sla = pd.to_datetime(raw).strftime('%d/%m/%Y %H:%M') if raw else ''
+            except Exception:
+                mp_sla = raw
+        elif channel in ('TikTok', 'Lazada', 'Zalora'):
+            # derive MP SLA from order date (fallback parse if initial parse failed)
+            try:
+                base_dt = ord_dt
+                if base_dt is None:
+                    base_dt = pd.to_datetime(row.get('ordered_date'), dayfirst=True, errors='coerce')
+                if pd.notna(base_dt):
+                    # TikTok: +1 day, Lazada: +1 day, Zalora: +2 days
+                    if channel == 'Zalora':
+                        days = 2
+                    else:
+                        days = 1
+                    mp_sla = (base_dt + timedelta(days=days)).strftime('%d/%m/%Y %H:%M')
+                else:
+                    mp_sla = ''
+            except Exception:
+                mp_sla = ''
         else:
             mp_sla = ''
 
@@ -250,7 +263,13 @@ def build_report(all_orders_file, shopee_files: dict, report_date: datetime = No
         return (BRAND_ORDER.get(nickname_brand.get(n, 'OTHER'), 3), n)
     pivot = pivot.loc[sorted(pivot.index, key=nick_sort)]
 
-    sla_cols = [c for c in pivot.columns if c != 'Grand Total']
+    # Sort SLA date columns chronologically (columns are strings in 'DD/MM/YYYY' format)
+    def sort_date_col(col_name):
+        try:
+            return pd.to_datetime(col_name, format='%d/%m/%Y')
+        except Exception:
+            return pd.Timestamp.max
+    sla_cols = sorted([c for c in pivot.columns if c != 'Grand Total'], key=sort_date_col)
     all_cols = sla_cols + ['Grand Total']
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -466,11 +485,4 @@ def build_report(all_orders_file, shopee_files: dict, report_date: datetime = No
         'warnings':      load_warnings,
         'report_date':   today.strftime('%d %B %Y'),
     }
-        # Sort date columns chronologically
-        def sort_date_col(col_name):
-            try:
-                return pd.to_datetime(col_name, format='%d/%m/%Y')
-            except:
-                return pd.Timestamp.max
-        sla_cols = sorted([c for c in pivot.columns if c != 'Grand Total'], key=sort_date_col)
     return buffer.getvalue(), summary

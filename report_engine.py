@@ -185,12 +185,23 @@ def build_report_rows(pending: pd.DataFrame, mp_sla_map: dict, shopee_tracking: 
                 mp_sla = pd.to_datetime(raw).strftime('%d/%m/%Y %H:%M') if raw else ''
             except Exception:
                 mp_sla = raw
-        elif channel == 'TikTok' and ord_dt:
-            mp_sla = (ord_dt + timedelta(days=1)).strftime('%d/%m/%Y %H:%M')
-        elif channel == 'Zalora' and ord_dt:
-            mp_sla = (ord_dt + timedelta(days=3)).strftime('%d/%m/%Y %H:%M')
-        elif channel == 'Lazada' and ord_dt:
-            mp_sla = (ord_dt + timedelta(days=1)).strftime('%d/%m/%Y %H:%M')
+        elif channel in ('TikTok', 'Lazada', 'Zalora'):
+            # derive MP SLA from order date; if initial parse failed, try a coercive parse
+            try:
+                base_dt = ord_dt
+                if base_dt is None:
+                    base_dt = pd.to_datetime(row.get('ordered_date'), dayfirst=True, errors='coerce')
+                if pd.notna(base_dt):
+                    # TikTok: +1 day, Lazada: +1 day, Zalora: +2 days
+                    if channel == 'Zalora':
+                        days = 2
+                    else:
+                        days = 1
+                    mp_sla = (base_dt + timedelta(days=days)).strftime('%d/%m/%Y %H:%M')
+                else:
+                    mp_sla = ''
+            except Exception:
+                mp_sla = ''
         else:
             mp_sla = ''
 

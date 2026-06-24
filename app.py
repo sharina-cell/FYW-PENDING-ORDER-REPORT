@@ -73,6 +73,15 @@ pivot_raw = df_report.pivot_table(
     index='Nickname', columns='FYW SLA', values='Order ID',
     aggfunc='count', fill_value=0
 )
+# Sort SLA date columns chronologically (DD/MM/YYYY) so columns display correctly
+def _sort_date_col(col_name):
+    try:
+        return datetime.strptime(col_name, '%d/%m/%Y').date()
+    except Exception:
+        return datetime.max.date()
+
+sla_cols = sorted([c for c in pivot_raw.columns], key=_sort_date_col)
+pivot_raw = pivot_raw.reindex(columns=sla_cols)
 pivot_raw['Grand Total'] = pivot_raw.sum(axis=1)
 total_row = pivot_raw.sum(axis=0)
 total_row.name = 'Grand Total'
