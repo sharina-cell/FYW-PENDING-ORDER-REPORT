@@ -237,7 +237,16 @@ def build_pivot(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         return (BMAP.get(nickname_brand.get(n, 'OTHER'), 3), n)
 
     pivot = pivot.loc[sorted(pivot.index, key=nick_sort)]
-    sla_cols = [c for c in pivot.columns if c != 'Grand Total']
+
+    # Sort SLA date columns chronologically (columns are strings in 'DD/MM/YYYY' format)
+    def sort_date_col(col_name):
+        try:
+            return pd.to_datetime(col_name, format='%d/%m/%Y')
+        except Exception:
+            # Non-date columns (like 'Grand Total') should come last
+            return pd.Timestamp.max
+
+    sla_cols = sorted([c for c in pivot.columns if c != 'Grand Total'], key=sort_date_col)
     all_cols  = sla_cols + ['Grand Total']
     return pivot, all_cols
 

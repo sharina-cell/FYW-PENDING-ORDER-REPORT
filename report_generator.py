@@ -466,5 +466,11 @@ def build_report(all_orders_file, shopee_files: dict, report_date: datetime = No
         'warnings':      load_warnings,
         'report_date':   today.strftime('%d %B %Y'),
     }
-
+        # Sort date columns chronologically
+        def sort_date_col(col_name):
+            try:
+                return pd.to_datetime(col_name, format='%d/%m/%Y')
+            except:
+                return pd.Timestamp.max
+        sla_cols = sorted([c for c in pivot.columns if c != 'Grand Total'], key=sort_date_col)
     return buffer.getvalue(), summary
