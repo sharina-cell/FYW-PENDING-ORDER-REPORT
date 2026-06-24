@@ -217,7 +217,7 @@ def build_report_rows(pending: pd.DataFrame, mp_sla_map: dict, shopee_tracking: 
             'Sold Price (MYR)': round(float(row['item_sold_amount']), 2),
             'Order Date':       ord_date,
             'MP SLA':           mp_sla,
-            'FYW SLA':          sla_date,
+            'FYW SLA':          sla_date if sla_date else mp_sla,  # fallback to MP SLA if FYW SLA is empty
             'FYW Status':       row['order_status'],
             'Tracking No.':     tracking,
             'Courier':          str(row['courier_name']).strip().replace('\\r', '')
