@@ -228,7 +228,7 @@ def build_report(all_orders_file, shopee_files: dict, report_date: datetime = No
             'Sold Price (MYR)': round(float(row['item_sold_amount']), 2),
             'Order Date':      ord_date,
             'MP SLA':          mp_sla,
-            'FYW SLA':         sla_date if sla_date else mp_sla,  # fallback to MP SLA if FYW SLA is empty
+            'FYW SLA':         sla_date if sla_date else (mp_sla.split(' ')[0] if mp_sla else ''),  # fallback to MP SLA date (no time)
             'FYW Status':      row['order_status'],
             'Tracking No.':    tracking,
             'Courier':         str(row['courier_name']).strip().replace('\\r', '') if pd.notna(row['courier_name']) else '',
